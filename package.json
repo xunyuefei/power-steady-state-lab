@@ -1,0 +1,17 @@
+{
+  "name": "power-steady-state-lab",
+  "version": "1.0.0",
+  "description": "电力系统稳态分析手算校验台 (华北电力大学811/812考研与电网工程)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "katex": "^0.18.9"
+  }
+}
