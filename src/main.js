@@ -21,17 +21,21 @@ const toastContainer = document.getElementById("toast-container");
 
 // 卡片输入数据存储 (formulaId -> { [fieldId]: value })
 const cardInputsState = {};
+// 卡片单位选择存储 (formulaId -> { [fieldId]: selectedUnit })
+const cardUnitsState = {};
 
 /**
  * 初始化应用
  */
 function init() {
-  // 初始化每个公式的默认数值
+  // 初始化每个公式的默认数值与默认单位
   FORMULAS.forEach(f => {
     cardInputsState[f.id] = {};
+    cardUnitsState[f.id] = {};
     const defaultPreset = f.presets && f.presets.length > 0 ? f.presets[0].values : {};
     (f.fields || []).forEach(field => {
       cardInputsState[f.id][field.id] = defaultPreset[field.id] !== undefined ? defaultPreset[field.id] : "";
+      cardUnitsState[f.id][field.id] = field.defaultUnit || (field.units ? field.units[0] : "");
     });
   });
 
@@ -84,6 +88,7 @@ function renderAllCards() {
   FORMULAS.forEach(f => {
     renderCardKaTeX(f.id);
     bindCardInputs(f.id);
+    updateDynamicFieldVisibility(f.id);
     executeCardCalculation(f.id);
   });
 
@@ -130,14 +135,17 @@ function createCardHTML(formula) {
         </div>
       ` : ''}
 
-      <!-- 纯数字输入字段区 -->
+      <!-- 纯数字输入字段区 (带可切换单位体系) -->
       ${hasFields ? `
-        <div class="card-inputs-grid">
+        <div class="card-inputs-grid" id="inputs-grid-${formula.id}">
           ${formula.fields.map(field => {
             const val = cardInputsState[formula.id][field.id] !== undefined ? cardInputsState[formula.id][field.id] : "";
+            const currentUnit = cardUnitsState[formula.id][field.id] || field.defaultUnit || '';
+            const hasMultipleUnits = field.units && field.units.length > 1;
+
             if (field.type === 'select') {
               return `
-                <div class="input-field-group">
+                <div class="input-field-group" id="group-${formula.id}-${field.id}">
                   <label for="input-${formula.id}-${field.id}">${field.label}</label>
                   <div class="num-input-wrap">
                     <select id="input-${formula.id}-${field.id}" data-formula="${formula.id}" data-field="${field.id}">
@@ -149,12 +157,13 @@ function createCardHTML(formula) {
                 </div>
               `;
             }
+
             return `
-              <div class="input-field-group">
+              <div class="input-field-group" id="group-${formula.id}-${field.id}">
                 <label for="input-${formula.id}-${field.id}" title="${field.hint || ''}">
                   ${field.label}
                 </label>
-                <div class="num-input-wrap">
+                <div class="num-input-wrap ${hasMultipleUnits ? 'has-unit-select' : ''}">
                   <input 
                     type="number" 
                     step="any"
@@ -164,7 +173,15 @@ function createCardHTML(formula) {
                     value="${val}" 
                     placeholder="${field.hint ? field.hint.slice(0, 8) : '输入数值'}"
                   >
-                  <span class="input-unit-badge">${field.unit || ''}</span>
+                  ${hasMultipleUnits ? `
+                    <select class="unit-selector" data-formula="${formula.id}" data-field="${field.id}" title="点击切换单位">
+                      ${field.units.map(u => `
+                        <option value="${u}" ${u === currentUnit ? 'selected' : ''}>${u}</option>
+                      `).join("")}
+                    </select>
+                  ` : `
+                    <span class="input-unit-badge">${field.defaultUnit || ''}</span>
+                  `}
                 </div>
               </div>
             `;
@@ -218,22 +235,85 @@ function renderCardKaTeX(formulaId) {
 }
 
 /**
- * 为单个卡片的输入框绑定毫秒级实时计算监听
+ * 动态根据配置（例如环网潮流运算负荷节点数）控制字段显示与隐藏
+ */
+function updateDynamicFieldVisibility(formulaId) {
+  if (formulaId === 7) {
+    // 环网潮流功率分布
+    const count = parseInt(cardInputsState[7]?.node_count, 10) || 2;
+    const g_p2 = document.getElementById("group-7-P2");
+    const g_q2 = document.getElementById("group-7-Q2");
+    const g_r2 = document.getElementById("group-7-R2");
+    const g_x2 = document.getElementById("group-7-X2");
+    const g_r3 = document.getElementById("group-7-R3");
+    const g_x3 = document.getElementById("group-7-X3");
+
+    const g_p3 = document.getElementById("group-7-P3");
+    const g_q3 = document.getElementById("group-7-Q3");
+    const g_r4 = document.getElementById("group-7-R4");
+    const g_x4 = document.getElementById("group-7-X4");
+
+    if (count === 1) {
+      if (g_p2) g_p2.style.display = "none";
+      if (g_q2) g_q2.style.display = "none";
+      if (g_r3) g_r3.style.display = "none";
+      if (g_x3) g_x3.style.display = "none";
+      if (g_p3) g_p3.style.display = "none";
+      if (g_q3) g_q3.style.display = "none";
+      if (g_r4) g_r4.style.display = "none";
+      if (g_x4) g_x4.style.display = "none";
+    } else if (count === 2) {
+      if (g_p2) g_p2.style.display = "";
+      if (g_q2) g_q2.style.display = "";
+      if (g_r3) g_r3.style.display = "";
+      if (g_x3) g_x3.style.display = "";
+      if (g_p3) g_p3.style.display = "none";
+      if (g_q3) g_q3.style.display = "none";
+      if (g_r4) g_r4.style.display = "none";
+      if (g_x4) g_x4.style.display = "none";
+    } else {
+      if (g_p2) g_p2.style.display = "";
+      if (g_q2) g_q2.style.display = "";
+      if (g_r3) g_r3.style.display = "";
+      if (g_x3) g_x3.style.display = "";
+      if (g_p3) g_p3.style.display = "";
+      if (g_q3) g_q3.style.display = "";
+      if (g_r4) g_r4.style.display = "";
+      if (g_x4) g_x4.style.display = "";
+    }
+  }
+}
+
+/**
+ * 为单个卡片的输入框绑定毫秒级实时计算与单位切换监听
  */
 function bindCardInputs(formulaId) {
   const card = document.getElementById(`card-${formulaId}`);
   if (!card) return;
 
-  // 输入框实时监听
-  card.querySelectorAll("input, select").forEach(input => {
+  // 输入框数值实时监听
+  card.querySelectorAll("input, select:not(.unit-selector)").forEach(input => {
     const handler = () => {
       const fieldId = input.getAttribute("data-field");
       cardInputsState[formulaId][fieldId] = input.value;
+      if (fieldId === 'node_count') {
+        updateDynamicFieldVisibility(formulaId);
+      }
       executeCardCalculation(formulaId);
     };
 
     input.addEventListener("input", handler);
     input.addEventListener("change", handler);
+  });
+
+  // 单位下拉切换实时监听
+  card.querySelectorAll(".unit-selector").forEach(sel => {
+    sel.addEventListener("change", () => {
+      const fieldId = sel.getAttribute("data-field");
+      cardUnitsState[formulaId][fieldId] = sel.value;
+      executeCardCalculation(formulaId);
+      showToast(`单位已切换为 ${sel.value}`);
+    });
   });
 
   // 预设算例按钮
@@ -248,6 +328,7 @@ function bindCardInputs(formulaId) {
           const inp = document.getElementById(`input-${formulaId}-${fid}`);
           if (inp) inp.value = vals[fid];
         });
+        updateDynamicFieldVisibility(formulaId);
         executeCardCalculation(formulaId);
         showToast(`已载入: ${formula.presets[pIdx].name}`);
       }
@@ -270,7 +351,7 @@ function bindCardInputs(formulaId) {
 }
 
 /**
- * 执行单个卡片的独立纯数字计算
+ * 执行单个卡片的独立纯数字计算 (带所选单位参数)
  */
 function executeCardCalculation(formulaId) {
   const formula = FORMULAS.find(f => f.id === formulaId);
@@ -279,9 +360,10 @@ function executeCardCalculation(formulaId) {
   const calcFnName = formula.calcFn || "calcFormulaRef";
   const calcFn = FORMULA_CALCULATORS[calcFnName] || FORMULA_CALCULATORS.calcFormulaRef;
   const inputs = cardInputsState[formulaId] || {};
+  const units = cardUnitsState[formulaId] || {};
 
   try {
-    const output = calcFn(inputs);
+    const output = calcFn(inputs, units);
     updateCardOutputs(formulaId, output);
   } catch (err) {
     console.error(`Error calculating formula #${formulaId}:`, err);
@@ -358,11 +440,13 @@ function toggleFocusCard(formulaId) {
 function copyCardHandcalc(formulaId) {
   const formula = FORMULAS.find(f => f.id === formulaId);
   const inputs = cardInputsState[formulaId] || {};
+  const units = cardUnitsState[formulaId] || {};
   const calcFn = FORMULA_CALCULATORS[formula.calcFn] || FORMULA_CALCULATORS.calcFormulaRef;
-  const output = calcFn(inputs);
+  const output = calcFn(inputs, units);
 
   let text = `【公式 #${formula.id} ${formula.name}】\n`;
   text += `已知条件: ${JSON.stringify(inputs)}\n`;
+  text += `单位配置: ${JSON.stringify(units)}\n`;
   if (output.results) {
     text += `计算结果:\n` + output.results.map(r => `  - ${r.label}: ${r.value} ${r.unit}`).join("\n") + "\n";
   }
@@ -414,12 +498,16 @@ function bindGlobalEvents() {
       (f.fields || []).forEach(field => {
         const val = defaultPreset[field.id] !== undefined ? defaultPreset[field.id] : "";
         cardInputsState[f.id][field.id] = val;
+        cardUnitsState[f.id][field.id] = field.defaultUnit || (field.units ? field.units[0] : "");
         const inp = document.getElementById(`input-${f.id}-${field.id}`);
         if (inp) inp.value = val;
+        const uSel = document.querySelector(`.unit-selector[data-formula="${f.id}"][data-field="${field.id}"]`);
+        if (uSel) uSel.value = cardUnitsState[f.id][field.id];
       });
+      updateDynamicFieldVisibility(f.id);
       executeCardCalculation(f.id);
     });
-    showToast("⚡ 已载入全套 47 公式华电典型真题算例！");
+    showToast("⚡ 已载入全套华电典型真题算例！");
   });
 
   // 主题切换
@@ -461,7 +549,7 @@ function applyFilters() {
     // 检查章节匹配
     const matchChapter = activeChapterId === "all" || f.chapter === activeChapterId;
 
-    // 检查搜索匹配 (支持 #08, 中文名称, 英文简写如 RT, XT, Pk, dU, xΔ 等)
+    // 检查搜索匹配
     let matchSearch = true;
     if (currentSearchQuery) {
       const idMatch = `#${f.id}`.includes(currentSearchQuery) || String(f.id) === currentSearchQuery;
@@ -555,4 +643,3 @@ function initPWA() {
 
 // 启动
 document.addEventListener("DOMContentLoaded", init);
-

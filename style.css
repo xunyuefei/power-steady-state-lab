@@ -594,6 +594,10 @@ body {
   outline: none;
 }
 
+.num-input-wrap.has-unit-select input {
+  padding-right: 58px;
+}
+
 .input-unit-badge {
   position: absolute;
   right: 8px;
@@ -601,6 +605,44 @@ body {
   font-family: var(--font-mono);
   color: var(--text-muted);
   pointer-events: none;
+}
+
+/* 优雅的微型单位切换下拉菜单 */
+.unit-selector {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  max-width: 52px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+  color: #38bdf8;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 4px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.unit-selector:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+}
+
+.unit-selector:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+}
+
+.unit-selector option {
+  background: #0f172a;
+  color: #f1f5f9;
+  font-size: 12px;
 }
 
 /* ═══════════ 结果展示与草稿纸代入 ═══════════ */
@@ -995,7 +1037,19 @@ body.focus-mode-active .formula-card.card-focused .num-input-wrap input {
     border-radius: 4px;
   }
 
-  .num-input-wrap select {
+  .num-input-wrap.has-unit-select input {
+    padding-right: 48px;
+  }
+
+  .unit-selector {
+    height: 22px;
+    max-width: 44px;
+    font-size: 10px;
+    padding: 0 2px;
+    right: 3px;
+  }
+
+  .num-input-wrap select:not(.unit-selector) {
     font-size: 11px;
     height: 34px;
     padding: 4px 6px;
