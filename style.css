@@ -126,6 +126,10 @@ body {
   white-space: nowrap;
 }
 
+.title-mobile {
+  display: none;
+}
+
 .brand-subtitle {
   display: block;
   font-size: 11px;
@@ -749,15 +753,306 @@ body.focus-mode-active .formula-card.card-focused .num-input-wrap input {
   }
 }
 
-/* 响应式调整 */
+/* ═══════════════════════════════════════════════════════════════
+   全方位移动端响应式深度适配 (Mobile First Adaptation)
+   ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .cards-grid {
-    grid-template-columns: 1fr;
+  html, body {
+    overflow-x: hidden !important;
+    width: 100%;
+    position: relative;
   }
-  .search-box-wrapper {
-    max-width: 100%;
-  }
+
+  /* 顶栏响应式排版：精致双行网格，原生 App 级质感 */
   .app-header {
-    padding: 10px 14px;
+    padding: 8px 12px 6px;
+  }
+
+  .header-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 
+      "brand actions"
+      "search search";
+    gap: 8px;
+    align-items: center;
+  }
+
+  .brand-group {
+    grid-area: brand;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .brand-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .brand-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .title-desktop {
+    display: none;
+  }
+
+  .title-mobile {
+    display: inline;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .header-actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    padding: 4px 6px;
+    font-size: 10.5px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  #btn-reset-all {
+    font-size: 0; /* 手机端用 ::after 替换为精简文字 */
+  }
+  #btn-reset-all::after {
+    content: "🔄 典型算例";
+    font-size: 11px;
+  }
+
+  #btn-pwa-install {
+    font-size: 0;
+  }
+  #btn-pwa-install::after {
+    content: "📱 安装";
+    font-size: 11px;
+  }
+
+  .icon-btn {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .search-box-wrapper {
+    grid-area: search;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .search-box-wrapper input {
+    padding: 7px 12px 7px 32px;
+    font-size: 12px;
+    border-radius: 16px;
+  }
+
+  .search-kbd {
+    display: none;
+  }
+
+  /* 章节胶囊栏支持横向触摸手势顺畅滑动 */
+  .chapter-capsule-bar {
+    margin: 6px 0 2px;
+    gap: 6px;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chapter-capsule {
+    padding: 4px 9px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+
+  /* 主体内容与卡片流式铺满屏幕 */
+  .main-container {
+    padding: 8px 8px 40px;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .toolbar-status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .count-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .mode-tip {
+    font-size: 10.5px;
+    line-height: 1.3;
+  }
+
+  .cards-grid {
+    grid-template-columns: 100% !important;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* 独立公式卡片全屏自适应 */
+  .formula-card {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 8px;
+  }
+
+  .card-header {
+    padding-bottom: 6px;
+  }
+
+  .card-name {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .card-category-tag {
+    font-size: 10px;
+  }
+
+  .card-tool-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  /* 核心公式展示盒与 KaTeX 自适应滑动 */
+  .formula-hero-box {
+    padding: 6px 8px;
+    min-height: 36px;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 4px;
+  }
+
+  .formula-hero-box .katex {
+    font-size: 0.9em;
+  }
+
+  .card-presets-row {
+    gap: 4px;
+  }
+
+  .presets-label {
+    font-size: 10px;
+  }
+
+  .preset-chip {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  /* 纯数字输入字段：移动端双列排布，整洁对齐 */
+  .card-inputs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .input-field-group {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .input-field-group label {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .num-input-wrap input {
+    font-size: 16px !important; /* 关键：防 iOS Safari 强制缩放拉扯视口 */
+    padding: 5px 24px 5px 6px;
+    height: 34px;
+    border-radius: 4px;
+  }
+
+  .num-input-wrap select {
+    font-size: 11px;
+    height: 34px;
+    padding: 4px 6px;
+  }
+
+  .input-unit-badge {
+    font-size: 8.5px;
+    right: 4px;
+  }
+
+  /* 结果展示与草稿代入输出 */
+  .card-output-section {
+    padding: 8px 10px;
+    gap: 6px;
+    border-radius: 6px;
+  }
+
+  .results-badges-row {
+    gap: 4px;
+  }
+
+  .result-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .result-key {
+    font-size: 10px;
+  }
+
+  .result-val {
+    font-size: 12.5px;
+  }
+
+  .result-unit {
+    font-size: 9.5px;
+  }
+
+  .substitution-row {
+    font-size: 10.5px;
+    padding: 5px 8px;
+    line-height: 1.35;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .substitution-row .katex {
+    font-size: 0.9em;
+  }
+
+  .exam-tip-box {
+    font-size: 10px;
+    padding: 4px 6px;
+    line-height: 1.35;
   }
 }
+
