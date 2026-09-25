@@ -3,168 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>电力系统稳态分析 · 高精度手算校验台 (华电811/812考研工程专用)</title>
-  <meta name="description" content="专为电力系统稳态分析手算题研发的零记忆负担、防错、高精度快速校验台。针对量纲统一、共轭阻抗、变压器容量折算、充电功率负号等考研细节陷阱深度优化。">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <title>47 核心公式独立手算校验台 · 华电 811/812 考研专用</title>
+  <!-- PWA 元数据与图标 -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="电分校验台">
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-DfYIEyb5.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-tBsVqmOm.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-D-zzVgej.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DFuukeav.css">
 </head>
 <body>
-  <!-- Global App Header -->
+  <!-- 顶部悬浮控制栏 -->
   <header class="app-header">
-    <div class="brand">
-      <div class="brand-logo">⚡</div>
-      <div class="brand-text">
-        <h1>
-          电力系统稳态分析 · 手算校验台
-          <span class="badge-ncepu">华电 811/812 备考利器</span>
-        </h1>
-        <p>量纲强隔离 · 复数共轭防坑 · 分步公式推导 · 电气等效拓扑图解</p>
-      </div>
-    </div>
-
-    <div class="header-actions">
-      <!-- Preset Dropdown -->
-      <div class="preset-dropdown-container">
-        <button id="btn-load-preset" class="btn btn-preset" title="选择并载入历年考研真题与教材例题">
-          <span>📖 切换真题例题 ▾</span>
-        </button>
-        <div id="preset-menu" class="preset-menu">
-          <!-- Populated by JavaScript -->
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <h1 class="brand-title">电力系统稳态分析 · 47 必背公式独立手算校验台</h1>
+          <span class="brand-subtitle">华北电力大学 811 / 812 考研专业课高精度快速核验专用 · 单纯对应输入数字</span>
         </div>
       </div>
 
-      <button id="btn-copy-report" class="btn btn-secondary" title="复制当前计算过程与结果到剪贴板，方便贴入草稿笔记">
-        <span>📋 复制计算报告</span>
-      </button>
-      <button id="btn-theme-toggle" class="theme-toggle-btn" title="切换深色/浅色主题">
-        🌙
-      </button>
+      <!-- 全局快速搜索与统计 -->
+      <div class="search-box-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search-input" placeholder="输入公式名/编号(#08)/符号(RT, ΔU, xΔ, Pk)..." autocomplete="off" spellcheck="false">
+        <kbd class="search-kbd">⌘K / Esc</kbd>
+      </div>
+
+      <!-- 快捷操作区 -->
+      <div class="header-actions">
+        <button id="btn-pwa-install" class="action-btn install-btn" style="display: none;" title="将本校验台安装为独立 App (离线自习室可用)">
+          📱 安装到桌面
+        </button>
+        <button id="btn-reset-all" class="action-btn secondary-btn" title="将所有公式重置为华电考研标准典型算例">
+          🔄 载入全套真题算例
+        </button>
+        <button id="btn-theme-toggle" class="action-btn icon-btn" title="切换深色/浅色主题">
+          🌓
+        </button>
+      </div>
     </div>
+
+    <!-- 章节快速筛选标签栏 -->
+    <nav class="chapter-capsule-bar" id="chapter-nav">
+      <!-- 动态生成章节胶囊按钮 -->
+    </nav>
   </header>
 
-  <!-- App Main Content Grid -->
-  <div class="app-container">
-    <!-- Left Sidebar: 9 Modules Nav -->
-    <aside class="sidebar-nav">
-      <div class="nav-header">
-        <h2>计算模块导航 (9大核心)</h2>
+  <!-- 主体内容容器 -->
+  <main class="main-container">
+    <!-- 状态与快捷提示 -->
+    <div class="toolbar-status-row">
+      <div class="status-summary">
+        <span class="count-badge" id="visible-count-badge">显示 47 / 47 个独立公式卡片</span>
+        <span class="mode-tip">💡 每个卡片均独立自包含：公式在眼前，输入数字即时输出高精校验结果与草稿纸代入式</span>
       </div>
-      <ul class="modules-list" id="modules-nav-list">
-        <!-- Rendered dynamically by main.js -->
-      </ul>
-    </aside>
-
-    <!-- Main Interactive Workbench -->
-    <main class="workbench">
-      <!-- Left: Input Form Panel -->
-      <section class="panel-card input-panel">
-        <div class="panel-header">
-          <div class="panel-header-top">
-            <h2 class="panel-title" id="current-module-title">
-              <span id="current-module-icon">⚡</span>
-              <span id="current-module-name">模块1：电压降落与损耗</span>
-            </h2>
-            <span class="badge-ncepu" id="current-module-badge">核心考点</span>
-          </div>
-          <div class="formula-tag" id="current-module-formula">
-            ΔU = (PR + QX)/U,  δU = (PX - QR)/U
-          </div>
-          <p class="form-hint" id="current-module-desc">
-            针对已知一端电压与流过功率，精确求解电压降落纵分量、横分量、相角偏移及对端实际综合电压。
-          </p>
-          <div class="preset-banner" id="preset-banner-info">
-            <div class="preset-banner-text">
-              <span>🎯 预设案例：</span>
-              <strong id="preset-case-name">华电811典型例题</strong>
-            </div>
-            <button class="btn btn-secondary" id="btn-reload-preset" style="padding: 4px 8px; font-size: 0.72rem;">一键重载</button>
-          </div>
-        </div>
-
-        <!-- Dynamic Form Fields Container -->
-        <div id="dynamic-form-fields">
-          <!-- Populated by JavaScript according to current module -->
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-          <button id="btn-calculate" class="btn btn-primary" style="flex: 1; padding: 10px;">
-            <span>⚡ 立即核验计算</span>
-          </button>
-          <button id="btn-reset-form" class="btn btn-secondary" style="padding: 10px 16px;">
-            <span>重置</span>
-          </button>
-        </div>
-      </section>
-
-      <!-- Right: Output Verification Deck -->
-      <section class="panel-card output-panel">
-        <!-- Tabs Switcher -->
-        <div class="tabs-bar">
-          <button class="tab-btn active" data-tab="summary">
-            <span>📊 结果总览</span>
-          </button>
-          <button class="tab-btn" data-tab="steps">
-            <span>📝 分步推导 (草稿纸对齐)</span>
-          </button>
-          <button class="tab-btn" data-tab="diagram">
-            <span>📐 图解 / 相量图</span>
-          </button>
-          <button class="tab-btn" data-tab="trap">
-            <span>⚠️ 考研避坑指南</span>
-          </button>
-        </div>
-
-        <!-- Tab 1: Summary -->
-        <div class="tab-content" id="tab-summary">
-          <div class="results-cards-grid" id="summary-cards-container">
-            <!-- Cards rendered here -->
-          </div>
-        </div>
-
-        <!-- Tab 2: Step-by-Step Derivation -->
-        <div class="tab-content" id="tab-steps" style="display: none;">
-          <div class="steps-container" id="steps-container">
-            <!-- Step by step text blocks -->
-          </div>
-        </div>
-
-        <!-- Tab 3: Diagram / Canvas -->
-        <div class="tab-content" id="tab-diagram" style="display: none;">
-          <div class="diagram-container" id="diagram-container">
-            <canvas id="phasor-canvas"></canvas>
-            <div id="svg-circuit-wrapper" style="width: 100%;"></div>
-          </div>
-        </div>
-
-        <!-- Tab 4: Trap Alert -->
-        <div class="tab-content" id="tab-trap" style="display: none;">
-          <div class="trap-box" id="trap-alert-box">
-            <div class="trap-icon">🚨</div>
-            <div class="trap-content">
-              <h4>考研高频丢分陷阱硬核剖析</h4>
-              <p id="trap-alert-text">
-                提示内容加载中...
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Global Footer -->
-  <footer class="app-footer">
-    <div>
-      © 2026 电力系统稳态分析手算校验实验室 · 专为华北电力大学(NCEPU)等电气专业考研设计
+      <div class="view-mode-group">
+        <button class="view-btn active" data-view="grid" id="btn-view-grid" title="网格平铺全览，多公式同时核算">网格全览</button>
+        <button class="view-btn" data-view="focus" id="btn-view-focus" title="单卡全屏专注模式">聚焦模式</button>
+      </div>
     </div>
-    <div style="font-family: var(--font-mono); color: var(--accent-cyan);">
-      Precision: 4-decimal Float · Complex Conjugate Verified
+
+    <!-- 47 独立公式卡片网格容器 -->
+    <div class="cards-grid" id="formula-cards-grid">
+      <!-- 动态渲染 47 个独立公式卡片 -->
     </div>
-  </footer>
+  </main>
+
+  <!-- 浮动通知 Toast -->
+  <div id="toast-container" class="toast-container"></div>
 
 </body>
 </html>

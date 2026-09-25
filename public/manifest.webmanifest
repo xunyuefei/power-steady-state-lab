@@ -1,0 +1,38 @@
+{
+  "name": "电力系统稳态分析 · 47 必背公式手算校验台 (华电 811/812 考研专用)",
+  "short_name": "电分校验台",
+  "description": "华北电力大学 811/812 考研专业课专用：47 个必背核心公式独立手算校验台，支持离线计算与草稿对齐",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080d1a",
+  "theme_color": "#0f172a",
+  "orientation": "any",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "utilities", "productivity"]
+}

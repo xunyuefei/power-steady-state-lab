@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- 背景渐变 -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a101d"/>
+      <stop offset="50%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+
+    <!-- 闪电渐变 -->
+    <linearGradient id="bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+
+    <!-- 外环发光滤镜 -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 圆角矩形底座 -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-grad)"/>
+
+  <!-- 科技光晕外环 -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#38bdf8" stroke-width="3" stroke-opacity="0.25" stroke-dasharray="8 12"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-opacity="0.15"/>
+
+  <!-- 母线与三相网络装饰线 -->
+  <g opacity="0.35" stroke="#38bdf8" stroke-width="2">
+    <line x1="96" y1="256" x2="160" y2="256"/>
+    <line x1="352" y1="256" x2="416" y2="256"/>
+    <circle cx="160" cy="256" r="6" fill="#38bdf8"/>
+    <circle cx="352" cy="256" r="6" fill="#38bdf8"/>
+  </g>
+
+  <!-- 核心高能闪电 -->
+  <path d="M 284 76 L 168 268 L 248 268 L 228 436 L 344 244 L 264 244 Z" 
+        fill="url(#bolt-grad)" 
+        filter="url(#glow)"/>
+
+  <!-- 底部微标 -->
+  <text x="256" y="470" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="28" 
+        font-weight="800" 
+        letter-spacing="4" 
+        fill="#38bdf8" 
+        text-anchor="middle" 
+        opacity="0.85">NCEPU · 811/812</text>
+</svg>
