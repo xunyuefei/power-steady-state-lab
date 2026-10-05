@@ -146,18 +146,24 @@ export const FORMULAS = [
     chapter: 'ch_flow',
     name: '简单潮流：电压降落与相角差',
     badge: '潮流核心·必考',
-    latexFormula: '\\Delta U = \\frac{PR + QX}{U},\\; \\delta U = \\frac{PX - QR}{U},\\; \\dot{U}_1 = (U_2 + \\Delta U) + j\\delta U,\\; \\delta = \\arctan\\frac{\\delta U}{U_2 + \\Delta U}',
-    description: '阻抗两端电压相量差，纵分量 ΔU 主导电压幅值差，横分量 δU 主导相位角差。',
+    latexFormula: '\\Delta U = \\frac{PR + QX}{U},\\; \\delta U = \\frac{PX - QR}{U},\\; \\dot{U}_1 = (U_2 + \\Delta U) + j\\delta U,\\; \\dot{U}_2 = (U_1 - \\Delta U) - j\\delta U',
+    description: '阻抗两端电压相量差。支持已知末端逆流求首端（加号）与已知首端顺流求末端（减号）双向推演！',
     fields: [
+      { id: 'calc_mode', label: '潮流推演方向', type: 'select', options: [
+        { value: 'end_to_start', text: '已知末端 (U₂, P₂, Q₂) 求首端 U₁ (逆流加法·升压)' },
+        { value: 'start_to_end', text: '已知首端 (U₁, P₁, Q₁) 求末端 U₂ (顺流减法·降压)' },
+        { value: 'u1_p2_quad', text: '已知首端 U₁ 与末端负荷 (P₂, Q₂) 求末端 U₂ (近似与精确双解)' },
+      ]},
       { id: 'U', label: '参考端电压 U', defaultUnit: 'kV', units: ['kV', 'V'], hint: '末端电压U2或首端U1' },
-      { id: 'P', label: '有功功率 P', defaultUnit: 'MW', units: ['MW', 'kW'], hint: '同侧有功' },
-      { id: 'Q', label: '无功功率 Q', defaultUnit: 'MVar', units: ['MVar', 'kVar'], hint: '同侧无功' },
+      { id: 'P', label: '同侧有功功率 P', defaultUnit: 'MW', units: ['MW', 'kW'], hint: '同侧有功' },
+      { id: 'Q', label: '同侧无功功率 Q', defaultUnit: 'MVar', units: ['MVar', 'kVar'], hint: '同侧无功' },
       { id: 'R', label: '线路/变压器电阻 R', defaultUnit: 'Ω', units: ['Ω'], hint: '支路电阻' },
       { id: 'X', label: '线路/变压器电抗 X', defaultUnit: 'Ω', units: ['Ω'], hint: '支路电抗' },
     ],
     presets: [
-      { name: '末端已知求首端 (经典真题)', values: { U: 110, P: 25, Q: 12, R: 12.5, X: 25.0 } },
-      { name: '大相角差高压工况', values: { U: 220, P: 150, Q: 60, R: 8.0, X: 45.0 } },
+      { name: '末端已知求首端 (加法·经典真题)', values: { calc_mode: 'end_to_start', U: 110, P: 25, Q: 12, R: 12.5, X: 25.0 } },
+      { name: '首端已知求末端 (减法·顺流降压)', values: { calc_mode: 'start_to_end', U: 115, P: 26.5, Q: 13.8, R: 12.5, X: 25.0 } },
+      { name: '已知首端U1与末端负荷求U2', values: { calc_mode: 'u1_p2_quad', U: 115, P: 25, Q: 12, R: 12.5, X: 25.0 } },
     ],
     calcFn: 'calcFormula6_VoltageDrop'
   },
@@ -202,24 +208,82 @@ export const FORMULAS = [
     calcFn: 'calcFormula7_RingPowerFlow'
   },
 
-  // #08 简单潮流：循环功率
+  // #08 简单潮流：循环功率 (含变压器变比折算)
   {
     id: 8,
     chapter: 'ch_flow',
-    name: '简单潮流：循环功率',
-    badge: '环网调控',
-    latexFormula: '\\dot{S}_C = \\frac{U_N \\cdot \\Delta \\dot{U}^*}{Z_\\Sigma^*} = \\frac{U_N (\\dot{U}_A - \\dot{U}_B)^*}{Z_\\Sigma^*}',
-    description: '闭式环网两端电压不等时产生的强制循环功率。在环网中不贡献负荷却加剧线路损耗。',
+    name: '简单潮流：循环功率 (含变压器变比折算)',
+    badge: '环网调控·必考',
+    latexFormula: '\\dot{S}_C = \\frac{U_N \\cdot (d\\dot{U})^*}{Z_\\Sigma^*} = \\frac{U_N (\\dot{U}_A - \\dot{U}_B^\')^*}{Z_\\Sigma^*},\\quad k = \\frac{U_{t1}}{U_{t2}},\\; \\dot{U}_B^\' = \\dot{U}_B \\times k',
+    description: '闭式环网/两端供电中电压不等或变压器变比不匹配产生的强制循环功率。内置变压器变比自动折算，无需草稿纸手动换算！',
     fields: [
-      { id: 'UN', label: '额定平均电压 U_N', defaultUnit: 'kV', units: ['kV', 'V'], hint: '如 110kV' },
+      { id: 'calc_mode', label: '计算模式', type: 'select', options: [
+        { value: 'trans_ratio', text: '【变压器变比折算法】输入两端母线电压+变压器分接头 (自动折算dU)' },
+        { value: 'parallel_trans', text: '【并联主变分接头差】同电源两台变压器变比不匹配产生环流' },
+        { value: 'direct_du', text: '【直接输入电压差相量】已知纵分量 Re(ΔU) 与横分量 Im(ΔU)' }
+      ]},
+      { id: 'UN', label: '归算侧额定电压 U_N', defaultUnit: 'kV', units: ['kV', 'V'], hint: '如 110kV' },
+      
+      // 模式 1 字段：变压器变比折算
+      { id: 'UA_mag', label: 'A端母线电压幅值 U_A', defaultUnit: 'kV', units: ['kV', 'V'], hint: '如 115kV' },
+      { id: 'UA_deg', label: 'A端电压相角 δ_A', defaultUnit: '°', units: ['°'], hint: '默认 0°' },
+      { id: 'UB_mag', label: 'B端母线电压幅值 U_B', defaultUnit: 'kV', units: ['kV', 'V'], hint: '如 10.5kV 或 38.5kV' },
+      { id: 'UB_deg', label: 'B端电压相角 δ_B', defaultUnit: '°', units: ['°'], hint: '如 0° 或 -3°' },
+      { id: 'trans_dir', label: 'B端折算方式', type: 'select', options: [
+        { value: 'to_high', text: 'B端在低压侧，向A端高压侧归算 (UB\' = UB × k)' },
+        { value: 'to_low', text: 'B端在高压侧，向A端低压侧归算 (UB\' = UB / k)' }
+      ]},
+      { id: 'UT_HV', label: '变压器高压侧分接头额定 U_t1', defaultUnit: 'kV', units: ['kV'], hint: '如 110, 112.75, 121' },
+      { id: 'UT_LV', label: '变压器低压侧额定 U_t2', defaultUnit: 'kV', units: ['kV'], hint: '如 11, 10.5, 38.5' },
+
+      // 模式 2 字段：双变压器变比差
+      { id: 'U_source', label: '共同高压电源电压 U_源', defaultUnit: 'kV', units: ['kV', 'V'], hint: '如 110kV' },
+      { id: 'UT1_HV', label: '变压器1高压侧分接头', defaultUnit: 'kV', units: ['kV'], hint: '如 110' },
+      { id: 'UT1_LV', label: '变压器1低压侧电压', defaultUnit: 'kV', units: ['kV'], hint: '如 10.5' },
+      { id: 'UT2_HV', label: '变压器2高压侧分接头', defaultUnit: 'kV', units: ['kV'], hint: '如 115.5' },
+      { id: 'UT2_LV', label: '变压器2低压侧电压', defaultUnit: 'kV', units: ['kV'], hint: '如 10.5' },
+
+      // 模式 3 字段：直接输入电压差
       { id: 'dU_re', label: '电压相差纵分量 Re(ΔU)', defaultUnit: 'kV', units: ['kV', 'V'], hint: 'UA - UB 的实部' },
       { id: 'dU_im', label: '电压相差横分量 Im(ΔU)', defaultUnit: 'kV', units: ['kV', 'V'], hint: 'UA - UB 的虚部' },
+
+      // 环路总阻抗 (所有模式通用)
       { id: 'R_sum', label: '环路总电阻 R_Σ', defaultUnit: 'Ω', units: ['Ω'], hint: '环路所有支路电阻和' },
       { id: 'X_sum', label: '环路总电抗 X_Σ', defaultUnit: 'Ω', units: ['Ω'], hint: '环路所有支路电抗和' },
     ],
     presets: [
-      { name: '经典电压差循环功率', values: { UN: 110, dU_re: 3.5, dU_im: 1.2, R_sum: 12, X_sum: 28 } },
-      { name: '纯幅值差无横分量', values: { UN: 110, dU_re: 5.0, dU_im: 0, R_sum: 10, X_sum: 25 } },
+      { 
+        name: '经典变比折算循环功率 (华电真题)', 
+        values: { 
+          calc_mode: 'trans_ratio', 
+          UN: 110, 
+          UA_mag: 115, UA_deg: 0, 
+          UB_mag: 10.5, UB_deg: 0, 
+          trans_dir: 'to_high',
+          UT_HV: 112.75, UT_LV: 10.5, 
+          R_sum: 12, X_sum: 28 
+        } 
+      },
+      { 
+        name: '并联主变分接头不匹配环流', 
+        values: { 
+          calc_mode: 'parallel_trans', 
+          UN: 110, 
+          U_source: 110,
+          UT1_HV: 110, UT1_LV: 10.5,
+          UT2_HV: 115.5, UT2_LV: 10.5,
+          R_sum: 10, X_sum: 25 
+        } 
+      },
+      { 
+        name: '直接电压差相量输入', 
+        values: { 
+          calc_mode: 'direct_du', 
+          UN: 110, 
+          dU_re: 3.5, dU_im: 1.2, 
+          R_sum: 12, X_sum: 28 
+        } 
+      },
     ],
     calcFn: 'calcFormula8_CirculatingPower'
   },

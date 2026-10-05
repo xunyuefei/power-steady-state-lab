@@ -542,6 +542,10 @@ body {
   gap: 4px;
 }
 
+.input-field-group.field-group-select {
+  grid-column: 1 / -1;
+}
+
 .input-field-group label {
   font-size: 11px;
   font-weight: 500;

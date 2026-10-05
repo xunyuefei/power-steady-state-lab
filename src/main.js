@@ -37,6 +37,28 @@ function init() {
       cardInputsState[f.id][field.id] = defaultPreset[field.id] !== undefined ? defaultPreset[field.id] : "";
       cardUnitsState[f.id][field.id] = field.defaultUnit || (field.units ? field.units[0] : "");
     });
+
+    // 为多模式公式（如 #08 循环功率）预置全模式合理后备数值
+    if (f.id === 8) {
+      const modeDefaults = {
+        calc_mode: 'trans_ratio',
+        UN: 110,
+        UA_mag: 115, UA_deg: 0,
+        UB_mag: 10.5, UB_deg: 0,
+        trans_dir: 'to_high',
+        UT_HV: 112.75, UT_LV: 10.5,
+        U_source: 110,
+        UT1_HV: 110, UT1_LV: 10.5,
+        UT2_HV: 115.5, UT2_LV: 10.5,
+        dU_re: 3.5, dU_im: 1.2,
+        R_sum: 12, X_sum: 28
+      };
+      Object.keys(modeDefaults).forEach(k => {
+        if (cardInputsState[8][k] === "" || cardInputsState[8][k] === undefined) {
+          cardInputsState[8][k] = modeDefaults[k];
+        }
+      });
+    }
   });
 
   renderChapterNav();
@@ -145,7 +167,7 @@ function createCardHTML(formula) {
 
             if (field.type === 'select') {
               return `
-                <div class="input-field-group" id="group-${formula.id}-${field.id}">
+                <div class="input-field-group field-group-select" id="group-${formula.id}-${field.id}">
                   <label for="input-${formula.id}-${field.id}">${field.label}</label>
                   <div class="num-input-wrap">
                     <select id="input-${formula.id}-${field.id}" data-formula="${formula.id}" data-field="${field.id}">
@@ -235,11 +257,61 @@ function renderCardKaTeX(formulaId) {
 }
 
 /**
- * 动态根据配置（例如环网潮流运算负荷节点数）控制字段显示与隐藏
+ * 动态根据配置（例如潮流推演方向、环网负荷节点数、循环功率计算模式）控制字段显示与隐藏
  */
 function updateDynamicFieldVisibility(formulaId) {
+  // #06 电压降落与相角差：根据推演方向切换标签与 Hero 公式
+  if (formulaId === 6) {
+    const mode = cardInputsState[6]?.calc_mode || 'end_to_start';
+    const groupU = document.getElementById("group-6-U");
+    const groupP = document.getElementById("group-6-P");
+    const groupQ = document.getElementById("group-6-Q");
+    const lblU = groupU ? groupU.querySelector("label") : null;
+    const lblP = groupP ? groupP.querySelector("label") : null;
+    const lblQ = groupQ ? groupQ.querySelector("label") : null;
+    const heroEl = document.getElementById("hero-formula-6");
+
+    if (mode === 'end_to_start') {
+      if (lblU) lblU.innerHTML = '末端电压 U₂ <span style="font-size:10px;opacity:0.7;">(已知参考端)</span>';
+      if (lblP) lblP.innerHTML = '末端有功 P₂';
+      if (lblQ) lblQ.innerHTML = '末端无功 Q₂';
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\Delta U = \\frac{P_2 R + Q_2 X}{U_2},\\; \\delta U = \\frac{P_2 X - Q_2 R}{U_2},\\; \\dot{U}_1 = (U_2 + \\Delta U) + j\\delta U,\\; U_1 = \\sqrt{(U_2 + \\Delta U)^2 + (\\delta U)^2}",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    } else if (mode === 'start_to_end') {
+      if (lblU) lblU.innerHTML = '首端电压 U₁ <span style="font-size:10px;opacity:0.7;">(已知参考端)</span>';
+      if (lblP) lblP.innerHTML = '首端有功 P₁';
+      if (lblQ) lblQ.innerHTML = '首端无功 Q₁';
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\Delta U = \\frac{P_1 R + Q_1 X}{U_1},\\; \\delta U = \\frac{P_1 X - Q_1 R}{U_1},\\; \\dot{U}_2 = (U_1 - \\Delta U) - j\\delta U,\\; U_2 = \\sqrt{(U_1 - \\Delta U)^2 + (\\delta U)^2}",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    } else {
+      if (lblU) lblU.innerHTML = '首端电压 U₁ <span style="font-size:10px;opacity:0.7;">(已知电源)</span>';
+      if (lblP) lblP.innerHTML = '末端负荷有功 P₂';
+      if (lblQ) lblQ.innerHTML = '末端负荷无功 Q₂';
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\Delta U' = \\frac{P_2 R + Q_2 X}{U_1},\\; U_1^2 = \\left(U_2 + \\frac{P_2 R + Q_2 X}{U_2}\\right)^2 + \\left(\\frac{P_2 X - Q_2 R}{U_2}\\right)^2 \\implies U_2",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    }
+  }
+
+  // #07 环网潮流功率分布
   if (formulaId === 7) {
-    // 环网潮流功率分布
     const count = parseInt(cardInputsState[7]?.node_count, 10) || 2;
     const g_p2 = document.getElementById("group-7-P2");
     const g_q2 = document.getElementById("group-7-Q2");
@@ -282,6 +354,91 @@ function updateDynamicFieldVisibility(formulaId) {
       if (g_x4) g_x4.style.display = "";
     }
   }
+
+  // #08 简单潮流：循环功率 (按变比折算/双变压器/直接电压差切换字段)
+  if (formulaId === 8) {
+    const mode = cardInputsState[8]?.calc_mode || 'trans_ratio';
+    
+    // 模式1字段: 变压器变比折算
+    const g_UA_mag = document.getElementById("group-8-UA_mag");
+    const g_UA_deg = document.getElementById("group-8-UA_deg");
+    const g_UB_mag = document.getElementById("group-8-UB_mag");
+    const g_UB_deg = document.getElementById("group-8-UB_deg");
+    const g_trans_dir = document.getElementById("group-8-trans_dir");
+    const g_UT_HV = document.getElementById("group-8-UT_HV");
+    const g_UT_LV = document.getElementById("group-8-UT_LV");
+
+    // 模式2字段: 双变压器变比差
+    const g_U_source = document.getElementById("group-8-U_source");
+    const g_UT1_HV = document.getElementById("group-8-UT1_HV");
+    const g_UT1_LV = document.getElementById("group-8-UT1_LV");
+    const g_UT2_HV = document.getElementById("group-8-UT2_HV");
+    const g_UT2_LV = document.getElementById("group-8-UT2_LV");
+
+    // 模式3字段: 直接输入电压差
+    const g_dU_re = document.getElementById("group-8-dU_re");
+    const g_dU_im = document.getElementById("group-8-dU_im");
+
+    const heroEl = document.getElementById("hero-formula-8");
+
+    // 辅助工具：若切换后字段为空，赋备用数值以便直接实时出计算结果
+    const ensureVal = (fid, defaultVal) => {
+      const inp = document.getElementById(`input-8-${fid}`);
+      if (inp && (!inp.value || inp.value === "")) {
+        const val = cardInputsState[8][fid] !== "" && cardInputsState[8][fid] !== undefined ? cardInputsState[8][fid] : defaultVal;
+        inp.value = val;
+        cardInputsState[8][fid] = val;
+      }
+    };
+
+    if (mode === 'trans_ratio') {
+      [g_UA_mag, g_UA_deg, g_UB_mag, g_UB_deg, g_trans_dir, g_UT_HV, g_UT_LV].forEach(el => el && (el.style.display = ""));
+      [g_U_source, g_UT1_HV, g_UT1_LV, g_UT2_HV, g_UT2_LV, g_dU_re, g_dU_im].forEach(el => el && (el.style.display = "none"));
+      ensureVal('UA_mag', 115);
+      ensureVal('UA_deg', 0);
+      ensureVal('UB_mag', 10.5);
+      ensureVal('UB_deg', 0);
+      ensureVal('UT_HV', 112.75);
+      ensureVal('UT_LV', 10.5);
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\dot{S}_C = \\frac{U_N \\cdot (d\\dot{U})^*}{Z_\\Sigma^*},\\quad k = \\frac{U_{t1}}{U_{t2}},\\; \\dot{U}_B' = \\dot{U}_B \\times k,\\; d\\dot{U} = \\dot{U}_A - \\dot{U}_B'",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    } else if (mode === 'parallel_trans') {
+      [g_UA_mag, g_UA_deg, g_UB_mag, g_UB_deg, g_trans_dir, g_UT_HV, g_UT_LV, g_dU_re, g_dU_im].forEach(el => el && (el.style.display = "none"));
+      [g_U_source, g_UT1_HV, g_UT1_LV, g_UT2_HV, g_UT2_LV].forEach(el => el && (el.style.display = ""));
+      ensureVal('U_source', 110);
+      ensureVal('UT1_HV', 110);
+      ensureVal('UT1_LV', 10.5);
+      ensureVal('UT2_HV', 115.5);
+      ensureVal('UT2_LV', 10.5);
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\dot{S}_C = \\frac{U_N \\cdot dU^*}{Z_\\Sigma^*},\\quad d\\dot{U} = U_{\\text{源}}\\left(1 - \\frac{k_1}{k_2}\\right),\\quad k_i = \\frac{U_{t1,i}}{U_{t2,i}}",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    } else {
+      [g_UA_mag, g_UA_deg, g_UB_mag, g_UB_deg, g_trans_dir, g_UT_HV, g_UT_LV, g_U_source, g_UT1_HV, g_UT1_LV, g_UT2_HV, g_UT2_LV].forEach(el => el && (el.style.display = "none"));
+      [g_dU_re, g_dU_im].forEach(el => el && (el.style.display = ""));
+      ensureVal('dU_re', 3.5);
+      ensureVal('dU_im', 1.2);
+      if (heroEl) {
+        try {
+          katex.render(
+            "\\dot{S}_C = \\frac{U_N \\cdot (d\\dot{U})^*}{Z_\\Sigma^*} = \\frac{U_N (dU_{\\text{re}} - j dU_{\\text{im}})}{R_\\Sigma - j X_\\Sigma}",
+            heroEl, { throwOnError: false, displayMode: true }
+          );
+        } catch (_) {}
+      }
+    }
+  }
 }
 
 /**
@@ -296,9 +453,7 @@ function bindCardInputs(formulaId) {
     const handler = () => {
       const fieldId = input.getAttribute("data-field");
       cardInputsState[formulaId][fieldId] = input.value;
-      if (fieldId === 'node_count') {
-        updateDynamicFieldVisibility(formulaId);
-      }
+      updateDynamicFieldVisibility(formulaId);
       executeCardCalculation(formulaId);
     };
 
@@ -604,14 +759,53 @@ function showToast(message) {
  * PWA Service Worker 注册与安装提示
  */
 function initPWA() {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").then((reg) => {
-        console.log("⚡ PWA Service Worker registered:", reg.scope);
-      }).catch((err) => {
-        console.warn("PWA SW registration failed:", err);
+    if (isLocalhost) {
+      // 本地开发环境：注销已有 SW 并清空旧缓存，防止 Dev 模式被旧缓存拦截
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        for (let reg of regs) {
+          reg.unregister();
+        }
       });
-    });
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.forEach(k => caches.delete(k));
+        });
+      }
+    } else {
+      // 生产环境 (GitHub Pages 等)：注册并监听自动更新
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").then((reg) => {
+          console.log("⚡ PWA Service Worker registered:", reg.scope);
+          // 每次加载主动检查更新
+          reg.update();
+
+          reg.addEventListener("updatefound", () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  showToast("⚡ 检测到最新算法纠正版本，正在自动载入...");
+                  setTimeout(() => window.location.reload(), 1200);
+                }
+              });
+            }
+          });
+        }).catch((err) => {
+          console.warn("PWA SW registration failed:", err);
+        });
+      });
+
+      let isRefreshing = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          window.location.reload();
+        }
+      });
+    }
   }
 
   let deferredPrompt = null;

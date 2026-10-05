@@ -242,33 +242,108 @@ export const FORMULA_CALCULATORS = {
   // ═══════════════════════════════════════════════════════════════
   // #06 简单潮流：电压降落与相角差
   // ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
+  // #06 简单潮流：电压降落与相角差
+  // ═══════════════════════════════════════════════════════════════
   calcFormula6_VoltageDrop(inputs, units = {}) {
+    const mode = inputs.calc_mode || 'end_to_start';
     const s_P = getScale(units.P || 'MW', 'MW');
     const s_Q = getScale(units.Q || 'MVar', 'MW');
     const s_U = getScale(units.U || 'kV', 'kV');
 
-    const U = parseF(inputs.U, 110) * s_U; // kV
+    const U_in = parseF(inputs.U, 110) * s_U; // kV
     const P = parseF(inputs.P, 25) * s_P; // MW
     const Q = parseF(inputs.Q, 12) * s_Q; // MVar
     const R = parseF(inputs.R, 12.5); // Ω
     const X = parseF(inputs.X, 25.0); // Ω
 
-    const dU = (P * R + Q * X) / U; // kV 纵分量
-    const du = (P * X - Q * R) / U; // kV 横分量
+    if (mode === 'end_to_start') {
+      // 已知末端求首端: U2 为已知, P, Q 为末端负荷/流出功率
+      // ΔU = (P2 R + Q2 X) / U2
+      // δU = (P2 X - Q2 R) / U2
+      // U1_dot = (U2 + ΔU) + j δU
+      // U1 = sqrt((U2 + ΔU)^2 + (δU)^2)
+      // δ = arctan(δU / (U2 + ΔU))
+      const U2 = U_in;
+      const dU = (P * R + Q * X) / U2;
+      const du = (P * X - Q * R) / U2;
+      const U1_real = U2 + dU;
+      const U1_imag = du;
+      const U1 = Math.hypot(U1_real, U1_imag);
+      const delta_deg = (Math.atan2(du, U1_real) * 180) / Math.PI;
+      const U_loss = U1 - U2;
 
-    const U_send = Math.sqrt(Math.pow(U + dU, 2) + Math.pow(du, 2));
-    const delta_deg = (Math.atan2(du, U + dU) * 180) / Math.PI;
+      return {
+        results: [
+          { label: "电压降落纵分量 ΔU", value: round(dU, 4), unit: "kV", highlight: true },
+          { label: "电压降落横分量 δU", value: round(du, 4), unit: "kV", highlight: true },
+          { label: "首端合成电压幅值 U₁", value: round(U1, 4), unit: "kV", highlight: true },
+          { label: "首端电压相量 U̇₁", value: `${round(U1_real, 3)} + j${round(U1_imag, 3)}`, unit: "kV" },
+          { label: "相角差 δ (首端超前)", value: `+${round(delta_deg, 4)}`, unit: "°" },
+          { label: "电压损耗 ΔU_y = U₁ - U₂", value: round(U_loss, 4), unit: "kV" }
+        ],
+        substitution: `\\Delta U = \\frac{${P}\\times ${R} + ${Q}\\times ${X}}{${U2}} = ${round(dU, 4)}\\text{ kV}, \\quad \\delta U = \\frac{${P}\\times ${X} - ${Q}\\times ${R}}{${U2}} = ${round(du, 4)}\\text{ kV} \\\\ \\dot{U}_1 = (${U2} + ${round(dU, 4)}) + j(${round(du, 4)}) = ${round(U1_real, 4)} + j${round(U1_imag, 4)}\\text{ kV} \\\\ U_1 = \\sqrt{(${round(U1_real, 4)})^2 + (${round(du, 4)})^2} = ${round(U1, 4)}\\text{ kV}, \\quad \\delta = \\arctan\\frac{${round(du, 4)}}{${round(U1_real, 4)}} = +${round(delta_deg, 4)}^\\circ`,
+        tips: "【逆流加法·求首端】已知末端求首端电压时，由于首端电位必然高于末端，相量公式采用加法：U̇₁ = (U₂ + ΔU) + jδU。纵分量 ΔU 主导电压幅值抬升，横分量 δU 主导相位超前。"
+      };
+    } else if (mode === 'start_to_end') {
+      // 已知首端求末端: U1 为已知, P, Q 为首端流入功率
+      // ΔU = (P1 R + Q1 X) / U1
+      // δU = (P1 X - Q1 R) / U1
+      // U2_dot = (U1 - ΔU) - j δU  (以 U1 为参考 U1∠0°)
+      // U2 = sqrt((U1 - ΔU)^2 + (δU)^2)
+      // δ = arctan(δU / (U1 - ΔU)), 末端相位滞后首端 -δ
+      const U1 = U_in;
+      const dU = (P * R + Q * X) / U1;
+      const du = (P * X - Q * R) / U1;
+      const U2_real = U1 - dU;
+      const U2 = Math.hypot(U2_real, du);
+      const delta_deg = (Math.atan2(du, U2_real) * 180) / Math.PI;
+      const U_loss = U1 - U2;
 
-    return {
-      results: [
-        { label: "电压降落纵分量 ΔU", value: round(dU, 4), unit: "kV", highlight: true },
-        { label: "电压降落横分量 δU", value: round(du, 4), unit: "kV", highlight: true },
-        { label: "合成电压幅值 U₁", value: round(U_send, 4), unit: "kV", highlight: true },
-        { label: "相角差 δ", value: round(delta_deg, 4), unit: "°" }
-      ],
-      substitution: `\\Delta U = \\frac{${P}\\times ${R} + ${Q}\\times ${X}}{${U}} = ${round(dU, 4)}\\text{ kV}, \\quad \\delta U = \\frac{${P}\\times ${X} - ${Q}\\times ${R}}{${U}} = ${round(du, 4)}\\text{ kV} \\\\ U_1 = \\sqrt{(${U} + ${round(dU, 4)})^2 + (${round(du, 4)})^2} = ${round(U_send, 4)}\\text{ kV}, \\quad \\delta = \\arctan\\frac{${round(du, 4)}}{${U}+${round(dU, 4)}} = ${round(delta_deg, 4)}^\\circ`,
-      tips: "【考研高频陷阱】纵分量 ΔU 主导电压幅值变化；横分量 δU 主导电压相角偏转。已知末端求首端用加号；已知首端求末端用减号。"
-    };
+      return {
+        results: [
+          { label: "电压降落纵分量 ΔU", value: round(dU, 4), unit: "kV", highlight: true },
+          { label: "电压降落横分量 δU", value: round(du, 4), unit: "kV", highlight: true },
+          { label: "末端合成电压幅值 U₂", value: round(U2, 4), unit: "kV", highlight: true },
+          { label: "末端电压相量 U̇₂", value: `${round(U2_real, 3)} - j${round(du, 3)}`, unit: "kV" },
+          { label: "相角差 δ (末端滞后)", value: `-${round(delta_deg, 4)}`, unit: "°" },
+          { label: "电压损耗 ΔU_y = U₁ - U₂", value: round(U_loss, 4), unit: "kV" }
+        ],
+        substitution: `\\Delta U = \\frac{${P}\\times ${R} + ${Q}\\times ${X}}{${U1}} = ${round(dU, 4)}\\text{ kV}, \\quad \\delta U = \\frac{${P}\\times ${X} - ${Q}\\times ${R}}{${U1}} = ${round(du, 4)}\\text{ kV} \\\\ \\dot{U}_2 = (${U1} - ${round(dU, 4)}) - j(${round(du, 4)}) = ${round(U2_real, 4)} - j${round(du, 4)}\\text{ kV} \\\\ U_2 = \\sqrt{(${round(U2_real, 4)})^2 + (${round(du, 4)})^2} = ${round(U2, 4)}\\text{ kV}, \\quad \\delta = -\\arctan\\frac{${round(du, 4)}}{${round(U2_real, 4)}} = -${round(delta_deg, 4)}^\\circ`,
+        tips: "【顺流减法·求末端】已知首端求末端电压时，末端电位必然低于首端，相量公式必须采用减法：U̇₂ = (U₁ - ΔU) - jδU。末端电压因线路阻抗损耗而幅值降低，且相位角滞后首端一个 δ 角。"
+      };
+    } else {
+      // u1_p2_quad: 已知首端 U1 与末端负荷 P2, Q2
+      const U1 = U_in;
+      const dU_prime = (P * R + Q * X) / U1;
+      const du_prime = (P * X - Q * R) / U1;
+      const U2_approx = Math.hypot(U1 - dU_prime, du_prime);
+
+      // 精确二次方程: y^2 + (2*PR - U1^2)*y + (PR^2 + PX^2) = 0
+      const PR = P * R + Q * X;
+      const PX = P * X - Q * R;
+      const C_SZ = Math.pow(PR, 2) + Math.pow(PX, 2);
+      const b_quad = 2 * PR - Math.pow(U1, 2);
+      const disc = Math.pow(b_quad, 2) - 4 * C_SZ;
+      let U2_exact = U2_approx;
+      if (disc >= 0) {
+        const y_root = (-b_quad + Math.sqrt(disc)) / 2;
+        if (y_root > 0) U2_exact = Math.sqrt(y_root);
+      }
+      const err = Math.abs(U2_exact - U2_approx);
+
+      return {
+        results: [
+          { label: "末端电压精确解 U₂", value: round(U2_exact, 4), unit: "kV", highlight: true },
+          { label: "末端电压近似解 U₂'", value: round(U2_approx, 4), unit: "kV", highlight: true },
+          { label: "估算纵分量 ΔU'", value: round(dU_prime, 4), unit: "kV" },
+          { label: "估算横分量 δU'", value: round(du_prime, 4), unit: "kV" },
+          { label: "近似绝对误差 |U₂ - U₂'|", value: round(err, 4), unit: "kV" }
+        ],
+        substitution: `\\Delta U' = \\frac{${P}\\times ${R} + ${Q}\\times ${X}}{${U1}} = ${round(dU_prime, 4)}\\text{ kV}, \\quad \\delta U' = \\frac{${P}\\times ${X} - ${Q}\\times ${R}}{${U1}} = ${round(du_prime, 4)}\\text{ kV} \\\\ \\text{近似公式：} U_{2\\text{,approx}} \\approx \\sqrt{(${U1} - ${round(dU_prime, 4)})^2 + (${round(du_prime, 4)})^2} = ${round(U2_approx, 4)}\\text{ kV} \\\\ \\text{精确双极方程解：} U_{2\\text{,exact}} = ${round(U2_exact, 4)}\\text{ kV}`,
+        tips: "【考研手算答题规范】若题目给出首端电压 U₁ 和末端负荷 P₂, Q₂，第一步手算估算时以首端电压 U₁（或额定电压 UN）代入分母求纵横降落 ΔU'，直接使用 U₂ ≈ U₁ - ΔU' 即可满足考研手算精度要求！"
+      };
+    }
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -387,34 +462,119 @@ export const FORMULA_CALCULATORS = {
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // #08 简单潮流：循环功率
+  // #08 简单潮流：循环功率 (含变压器变比折算)
   // ═══════════════════════════════════════════════════════════════
   calcFormula8_CirculatingPower(inputs, units = {}) {
+    const mode = inputs.calc_mode || 'trans_ratio';
     const s_UN = getScale(units.UN || 'kV', 'kV');
-    const s_dU = getScale(units.dU_re || 'kV', 'kV');
-
     const UN = parseF(inputs.UN, 110) * s_UN; // kV
-    const dU_re = parseF(inputs.dU_re, 3.5) * s_dU; // kV
-    const dU_im = parseF(inputs.dU_im, 1.2) * s_dU; // kV
     const R_sum = parseF(inputs.R_sum, 12); // Ω
     const X_sum = parseF(inputs.X_sum, 28); // Ω
-
-    // Sc = UN * ΔU* / ZΣ* = UN * (dU_re - j dU_im) / (R_sum - j X_sum)
-    // 分子乘分母共轭: UN * (dU_re - j dU_im) * (R_sum + j X_sum) / (R_sum^2 + X_sum^2)
     const Z2 = Math.pow(R_sum, 2) + Math.pow(X_sum, 2);
-    const Sc_P = (UN * (dU_re * R_sum + dU_im * X_sum)) / Z2;
-    const Sc_Q = (UN * (dU_re * X_sum - dU_im * R_sum)) / Z2;
-    const Sc_mag = Math.hypot(Sc_P, Sc_Q);
 
-    return {
-      results: [
-        { label: "循环功率幅值 |S_C|", value: round(Sc_mag, 3), unit: "MVA", highlight: true },
-        { label: "循环有功 P_C", value: round(Sc_P, 3), unit: "MW" },
-        { label: "循环无功 Q_C", value: round(Sc_Q, 3), unit: "MVar", highlight: true }
-      ],
-      substitution: `\\dot{S}_C = \\frac{U_N \\cdot \\Delta \\dot{U}^*}{Z_\\Sigma^*} = \\frac{${UN} \\times (${dU_re} - j${dU_im})}{${R_sum} - j${X_sum}} = ${round(Sc_P, 3)} + j${round(Sc_Q, 3)}\\text{ MVA}`,
-      tips: "循环功率是由环网两端电压幅值差或相角差引起的强制无功/有功流动。它在环网内无功空转，增加网损，可通过加装串联移相变压器消除。"
-    };
+    if (mode === 'trans_ratio') {
+      const s_UA = getScale(units.UA_mag || 'kV', 'kV');
+      const s_UB = getScale(units.UB_mag || 'kV', 'kV');
+      const UA = parseF(inputs.UA_mag, 115) * s_UA; // kV
+      const deltaA = parseF(inputs.UA_deg, 0); // deg
+      const UB = parseF(inputs.UB_mag, 10.5) * s_UB; // kV
+      const deltaB = parseF(inputs.UB_deg, 0); // deg
+
+      const UT_HV = parseF(inputs.UT_HV, 112.75); // kV
+      const UT_LV = parseF(inputs.UT_LV, 10.5); // kV
+      const transDir = inputs.trans_dir || 'to_high';
+
+      // 变压器实际变比 k
+      const k = UT_LV > 0 ? (UT_HV / UT_LV) : 1;
+      // B端折算电压 UB'
+      const UB_prime = transDir === 'to_high' ? (UB * k) : (k > 0 ? (UB / k) : UB);
+
+      const radA = (deltaA * Math.PI) / 180;
+      const radB = (deltaB * Math.PI) / 180;
+      const UA_re = UA * Math.cos(radA);
+      const UA_im = UA * Math.sin(radA);
+      const UB_re = UB_prime * Math.cos(radB);
+      const UB_im = UB_prime * Math.sin(radB);
+
+      // 电位差相量 dU = UA - UB'
+      const dU_re = UA_re - UB_re;
+      const dU_im = UA_im - UB_im;
+      const dU_mag = Math.hypot(dU_re, dU_im);
+
+      // 循环功率: Sc = UN * (dU)* / ZΣ* = UN * (dU_re - j dU_im) / (R_sum - j X_sum)
+      // 分子乘 (R_sum + j X_sum)
+      const Sc_P = Z2 > 0 ? (UN * (dU_re * R_sum + dU_im * X_sum)) / Z2 : 0;
+      const Sc_Q = Z2 > 0 ? (UN * (dU_re * X_sum - dU_im * R_sum)) / Z2 : 0;
+      const Sc_mag = Math.hypot(Sc_P, Sc_Q);
+
+      const pFlow = Sc_P >= 0 ? "A → B" : "B → A";
+      const qFlow = Sc_Q >= 0 ? "A → B" : "B → A";
+
+      return {
+        results: [
+          { label: "循环功率幅值 |S_C|", value: round(Sc_mag, 3), unit: "MVA", highlight: true },
+          { label: "循环有功 P_C", value: round(Sc_P, 3), unit: "MW" },
+          { label: "循环无功 Q_C", value: round(Sc_Q, 3), unit: "MVar", highlight: true },
+          { label: "变压器实际变比 k", value: round(k, 4), unit: "" },
+          { label: "B端折算电压 U_B'", value: round(UB_prime, 3), unit: "kV", highlight: true },
+          { label: "环网电位差 |d U̇|", value: round(dU_mag, 3), unit: "kV" },
+          { label: "电位差相量 d U̇", value: `${round(dU_re, 3)} + j${round(dU_im, 3)}`, unit: "kV" },
+          { label: "潮流流向判别", value: `有功 ${pFlow} · 无功 ${qFlow}`, unit: "" }
+        ],
+        substitution: `k = \\frac{U_{t1}}{U_{t2}} = \\frac{${UT_HV}}{${UT_LV}} = ${round(k, 4)} \\\\ U_B' = U_B \\times k = ${UB} \\times ${round(k, 4)} = ${round(UB_prime, 3)}\\text{ kV} \\\\ d\\dot{U} = \\dot{U}_A - \\dot{U}_B' = (${round(UA_re, 3)}+j${round(UA_im, 3)}) - (${round(UB_re, 3)}+j${round(UB_im, 3)}) = ${round(dU_re, 3)} + j(${round(dU_im, 3)})\\text{ kV} \\\\ \\dot{S}_C = \\frac{U_N \\cdot (d\\dot{U})^*}{Z_\\Sigma^*} = \\frac{${UN} \\times (${round(dU_re, 3)} - j(${round(dU_im, 3)}))}{${R_sum} - j${X_sum}} = ${round(Sc_P, 3)} + j${round(Sc_Q, 3)}\\text{ MVA}`,
+        tips: "【变比折算与循环功率本质】变压器分接头或非标准变比引起两端电位不平衡。折算时低压侧电压 UB 必须乘以变比 k 统一归算到高压基准级 UN。电位幅值差（纵差）主导无功循环功率 QC；相位角差（横差）主导有功循环功率 PC。该功率在环网内无功空转加剧铜损，不送向负荷。"
+      };
+    } else if (mode === 'parallel_trans') {
+      const s_Usrc = getScale(units.U_source || 'kV', 'kV');
+      const U_src = parseF(inputs.U_source, 110) * s_Usrc; // kV
+      const UT1_HV = parseF(inputs.UT1_HV, 110);
+      const UT1_LV = parseF(inputs.UT1_LV, 10.5);
+      const UT2_HV = parseF(inputs.UT2_HV, 115.5);
+      const UT2_LV = parseF(inputs.UT2_LV, 10.5);
+
+      const k1 = UT1_LV > 0 ? UT1_HV / UT1_LV : 1;
+      const k2 = UT2_LV > 0 ? UT2_HV / UT2_LV : 1;
+      const dU = k2 > 0 ? U_src * (1 - k1 / k2) : 0;
+      const dU_re = dU, dU_im = 0;
+      const dU_mag = Math.abs(dU);
+
+      const Sc_P = Z2 > 0 ? (UN * (dU_re * R_sum)) / Z2 : 0;
+      const Sc_Q = Z2 > 0 ? (UN * (dU_re * X_sum)) / Z2 : 0;
+      const Sc_mag = Math.hypot(Sc_P, Sc_Q);
+
+      return {
+        results: [
+          { label: "并联环流功率 |S_C|", value: round(Sc_mag, 3), unit: "MVA", highlight: true },
+          { label: "循环有功 P_C", value: round(Sc_P, 3), unit: "MW" },
+          { label: "循环无功 Q_C", value: round(Sc_Q, 3), unit: "MVar", highlight: true },
+          { label: "变压器1 变比 k₁", value: round(k1, 4), unit: "" },
+          { label: "变压器2 变比 k₂", value: round(k2, 4), unit: "" },
+          { label: "闭式电位差 dU", value: round(dU, 4), unit: "kV", highlight: true }
+        ],
+        substitution: `k_1 = \\frac{${UT1_HV}}{${UT1_LV}} = ${round(k1, 4)}, \\quad k_2 = \\frac{${UT2_HV}}{${UT2_LV}} = ${round(k2, 4)} \\\\ d\\dot{U} = U_{\\text{源}}\\left(1 - \\frac{k_1}{k_2}\\right) = ${U_src} \\times \\left(1 - \\frac{${round(k1, 4)}}{${round(k2, 4)}}\\right) = ${round(dU, 4)}\\text{ kV} \\\\ \\dot{S}_C = \\frac{U_N \\cdot dU^*}{Z_\\Sigma^*} = \\frac{${UN} \\times ${round(dU, 4)}}{${R_sum} - j${X_sum}} = ${round(Sc_P, 3)} + j${round(Sc_Q, 3)}\\text{ MVA}`,
+        tips: "【主变并列运行考点】同母线供电的双台并联变压器分接头档位不一致时，在两台变压器构成的闭合回路中会产生附加环流和循环功率 SC。此功率使一台变压器过载，另一台欠载，显著增大全网发热与网损。"
+      };
+    } else {
+      // direct_du
+      const s_dU = getScale(units.dU_re || 'kV', 'kV');
+      const dU_re = parseF(inputs.dU_re, 3.5) * s_dU; // kV
+      const dU_im = parseF(inputs.dU_im, 1.2) * s_dU; // kV
+      const Sc_P = Z2 > 0 ? (UN * (dU_re * R_sum + dU_im * X_sum)) / Z2 : 0;
+      const Sc_Q = Z2 > 0 ? (UN * (dU_re * X_sum - dU_im * R_sum)) / Z2 : 0;
+      const Sc_mag = Math.hypot(Sc_P, Sc_Q);
+
+      return {
+        results: [
+          { label: "循环功率幅值 |S_C|", value: round(Sc_mag, 3), unit: "MVA", highlight: true },
+          { label: "循环有功 P_C", value: round(Sc_P, 3), unit: "MW" },
+          { label: "循环无功 Q_C", value: round(Sc_Q, 3), unit: "MVar", highlight: true },
+          { label: "电位差纵分量 Re(ΔU)", value: round(dU_re, 4), unit: "kV" },
+          { label: "电位差横分量 Im(ΔU)", value: round(dU_im, 4), unit: "kV" }
+        ],
+        substitution: `\\dot{S}_C = \\frac{U_N \\cdot (d\\dot{U})^*}{Z_\\Sigma^*} = \\frac{${UN} \\times (${round(dU_re, 3)} - j${round(dU_im, 3)})}{${R_sum} - j${X_sum}} = ${round(Sc_P, 3)} + j${round(Sc_Q, 3)}\\text{ MVA}`,
+        tips: "循环功率是由环网两端电压幅值差或相角差引起的强制无功/有功流动。它在环网内无功空转，增加网损，可通过加装串联移相变压器消除。"
+      };
+    }
   },
 
   // ═══════════════════════════════════════════════════════════════
